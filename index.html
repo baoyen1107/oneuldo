@@ -477,9 +477,8 @@ function closeAd() {
 
 function doShare() {
   if (!currentData) return;
-  const text = `오늘의 한 마디\n\n"${currentData.main}"\n\n${currentData.sub}\n\n— 오늘도 (oneuldo.vercel.app)`;
   if (navigator.share) {
-    navigator.share({ title: '오늘의 하루가 어땠나요?', text, url: 'https://oneuldo.vercel.app' })
+    navigator.share({ title: '오늘의 하루가 어땠나요?', url: 'https://oneuldo.vercel.app' })
       .then(() => showToast('공유됐어요!'))
       .catch(() => {});
   } else {
