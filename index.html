@@ -298,7 +298,8 @@
 
 <script>
 // ── 설정 ─────────────────────────────────────────────
-const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTE3Sfe0nQE6HaqLvI5SwHUVF4PxqKTk8ficPWoTfZkbfBGCf_dUmCSm-yfhVnrm9WANkHDfAlKZOa5/pub?output=csv';
+const _d = new Date(); const _cache = `${_d.getFullYear()}${_d.getMonth()}${_d.getDate()}`;
+const SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/e/2PACX-1vTE3Sfe0nQE6HaqLvI5SwHUVF4PxqKTk8ficPWoTfZkbfBGCf_dUmCSm-yfhVnrm9WANkHDfAlKZOa5/pub?output=csv&t=${_cache}`;
 
 const BG_IMAGES = {
   autumn:    'https://i.imgur.com/vPWd3OB.jpeg',
@@ -493,7 +494,10 @@ async function closeAd() {
     const link = document.createElement('a');
     link.download = `오늘도_${toDateStr(new Date())}.png`;
     link.href = canvas.toDataURL('image/png');
+    // 모바일 호환 저장
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
 
     showToast('이미지가 저장됐어요!');
   } catch(e) {
