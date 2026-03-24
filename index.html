@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>오늘도</title>
 <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -271,8 +270,8 @@
       <div class="word-sub" id="wordSub"></div>
       <div class="error-msg" id="errorMsg">오늘의 문구를 준비 중이에요 🌿<br>내일 다시 와주세요!</div>
       <div class="cta-wrap" id="ctaWrap" style="display:none">
-        <button class="btn-save" id="btnSave" onclick="onSave()">이미지로 저장</button>
-        <button class="btn-share" id="btnShare" onclick="onShare()">공유</button>
+        <button class="btn-save" id="btnSave" onclick="onSave()">공유하기</button>
+        <button class="btn-share" id="btnShare" onclick="onCopy()">링크 복사</button>
       </div>
     </div>
   </div>
@@ -288,7 +287,7 @@
       <div class="ad-box-icon" id="adIcon">✨</div>
       <div class="ad-box-title">전면 광고 영역</div>
       <div class="ad-box-sub">실제 서비스에서는<br>이 자리에 광고가 노출됩니다</div>
-      <button class="btn-ad-close" id="btnAdClose" onclick="closeAd()">저장하기</button>
+      <button class="btn-ad-close" id="btnAdClose" onclick="closeAd()">공유하기</button>
     </div>
     <button class="ad-skip" onclick="closeAd()">건너뛰기</button>
   </div>
@@ -462,60 +461,33 @@ async function init() {
   setTimeout(() => document.getElementById('loading').classList.add('hide'), 400);
 }
 
-// ── 이미지 저장 (전면 광고 → html2canvas) ─────────────
+// ── 공유하기 (전면 광고 → 공유 시트) ─────────────────
 function onSave() {
   document.getElementById('adOverlay').classList.add('show');
 }
 
-async function closeAd() {
+function closeAd() {
   document.getElementById('adOverlay').classList.remove('show');
-
-  const btn = document.getElementById('btnSave');
-  btn.textContent = '저장 중...';
-  btn.classList.add('saving');
-
-  try {
-    // 광고 배너, 버튼 숨기고 캡처
-    const adBanner = document.getElementById('adBanner');
-    const ctaWrap  = document.getElementById('ctaWrap');
-    adBanner.style.display = 'none';
-    ctaWrap.style.display  = 'none';
-
-    const canvas = await html2canvas(document.getElementById('app'), {
-      useCORS: true,
-      allowTaint: true,
-      scale: 2,
-      backgroundColor: null,
-    });
-
-    adBanner.style.display = '';
-    ctaWrap.style.display  = 'flex';
-
-    const link = document.createElement('a');
-    link.download = `오늘도_${toDateStr(new Date())}.png`;
-    link.href = canvas.toDataURL('image/png');
-    // 모바일 호환 저장
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    showToast('이미지가 저장됐어요!');
-  } catch(e) {
-    showToast('저장에 실패했어요. 다시 시도해주세요.');
-    document.getElementById('adBanner').style.display = '';
-    document.getElementById('ctaWrap').style.display  = 'flex';
-  }
-
-  btn.textContent = '이미지로 저장';
-  btn.classList.remove('saving');
+  doShare();
 }
 
-// ── 공유 ──────────────────────────────────────────────
-function onShare() {
+function doShare() {
   if (!currentData) return;
-  const text = `오늘의 한 마디\n\n"${currentData.main}"\n\n${currentData.sub}\n\n— 오늘도`;
-  if (navigator.share) navigator.share({ title:'오늘도', text });
-  else navigator.clipboard.writeText(text).then(() => showToast('클립보드에 복사됐어요!'));
+  const text = `오늘의 한 마디\n\n"${currentData.main}"\n\n${currentData.sub}\n\n— 오늘도 (oneuldo.vercel.app)`;
+  if (navigator.share) {
+    navigator.share({ title: '오늘도', text })
+      .then(() => showToast('공유됐어요!'))
+      .catch(() => {});
+  } else {
+    navigator.clipboard.writeText(text).then(() => showToast('클립보드에 복사됐어요!'));
+  }
+}
+
+// ── 링크 복사 ──────────────────────────────────────────
+function onCopy() {
+  navigator.clipboard.writeText('https://oneuldo.vercel.app')
+    .then(() => showToast('링크가 복사됐어요!'))
+    .catch(() => showToast('복사에 실패했어요.'));
 }
 
 function showToast(msg) {
