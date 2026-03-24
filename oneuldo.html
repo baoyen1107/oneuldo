@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>오늘도</title>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Noto Sans KR', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    background: #1a1510;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 430px;
+    min-height: 100vh;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 배경 이미지 */
+  .bg {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center top;
+    z-index: 0;
+  }
+  .bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.12) 0%,
+      rgba(0,0,0,0.08) 40%,
+      rgba(0,0,0,0.38) 100%
+    );
+  }
+
+  /* 로딩 */
+  .loading {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #1a1a2a;
+    gap: 16px;
+    transition: opacity 0.5s ease;
+  }
+  .loading.hide { opacity: 0; pointer-events: none; }
+  .loading-emoji { font-size: 36px; animation: pulse 1.5s ease-in-out infinite; }
+  .loading-text { font-size: 14px; color: rgba(255,255,255,0.5); letter-spacing: 1px; }
+
+  /* 메인 */
+  .main {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 100px 22px 90px;
+  }
+
+  /* frosted glass 카드 */
+  .glass-card {
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-radius: 28px;
+    padding: 36px 28px 32px;
+    opacity: 0;
+    animation: fadeUp .8s ease forwards .3s;
+  }
+
+  .date-label {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 22px;
+  }
+
+  .greeting {
+    margin-bottom: 26px;
+  }
+  .greeting-small {
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+  .greeting-text {
+    font-family: 'Gowun Batang', serif;
+    font-size: 18px;
+    line-height: 1.7;
+  }
+
+  .divider {
+    width: 28px;
+    height: 2.5px;
+    border-radius: 2px;
+    margin-bottom: 26px;
+  }
+
+  .word-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 14px;
+  }
+  .word-tag::before {
+    content: '';
+    width: 4px; height: 4px;
+    border-radius: 50%;
+  }
+
+  .word-main {
+    font-family: 'Gowun Batang', serif;
+    font-size: 26px;
+    line-height: 1.72;
+    word-break: keep-all;
+    white-space: pre-line;
+    position: relative;
+    padding-left: 16px;
+  }
+  .word-main::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 6px; bottom: 6px;
+    width: 3px;
+    border-radius: 2px;
+  }
+
+  .word-sub {
+    margin-top: 14px;
+    font-size: 13px;
+    line-height: 1.9;
+    padding-left: 16px;
+  }
+
+  .error-msg {
+    text-align: center;
+    padding: 20px 0 0;
+    font-size: 14px;
+    line-height: 1.8;
+    display: none;
+    opacity: 0.7;
+  }
+
+  /* CTA - 이모지 없이 */
+  .cta-wrap {
+    margin-top: 28px;
+    display: flex;
+    gap: 10px;
+  }
+  .btn-save {
+    flex: 1; height: 52px;
+    border: none;
+    border-radius: 14px;
+    font-size: 15px; font-weight: 700;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity .2s, transform .15s;
+    backdrop-filter: blur(10px);
+    letter-spacing: -0.3px;
+  }
+  .btn-save:active { opacity:.8; transform:scale(.98); }
+  .btn-save.saving { opacity: 0.6; cursor: not-allowed; }
+
+  .btn-share {
+    height: 52px; width: 52px; flex-shrink: 0;
+    border-radius: 14px;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity .2s;
+    backdrop-filter: blur(10px);
+    border: none;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .btn-share:active { opacity:.7; }
+
+  /* 광고 배너 */
+  .ad-banner {
+    position: relative;
+    z-index: 10;
+    height: 72px;
+    backdrop-filter: blur(12px);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    align-items: center; justify-content: center; gap: 8px;
+  }
+  .ad-label { font-size: 10px; border: 1px solid rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px; letter-spacing: 1px; }
+  .ad-text  { font-size: 13px; }
+
+  /* 전면 광고 */
+  .ad-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(12px);
+    z-index: 200;
+    justify-content: center; align-items: center; flex-direction: column; gap: 16px;
+  }
+  .ad-overlay.show { display: flex; }
+  .ad-box {
+    width: 300px; background: white; border-radius: 24px;
+    padding: 40px 28px 32px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    position: relative; box-shadow: 0 24px 64px rgba(0,0,0,0.3);
+  }
+  .ad-box-tag { position:absolute; top:16px; left:18px; font-size:10px; color:#bbb; background:#f5f5f5; padding:2px 8px; border-radius:6px; letter-spacing:1px; }
+  .ad-box-icon { font-size:44px; margin-bottom:4px; }
+  .ad-box-title { font-family:'Gowun Batang',serif; font-size:20px; color:#1a1a1a; }
+  .ad-box-sub { font-size:13px; color:#aaa; line-height:1.6; }
+  .btn-ad-close { margin-top:8px; width:100%; height:50px; border:none; border-radius:14px; font-size:15px; font-weight:700; cursor:pointer; font-family:'Noto Sans KR',sans-serif; color:white; }
+  .ad-skip { color:rgba(255,255,255,.7); font-size:13px; cursor:pointer; background:none; border:none; font-family:'Noto Sans KR',sans-serif; text-decoration:underline; }
+
+  .toast {
+    position: fixed; bottom: 90px; left: 50%;
+    transform: translateX(-50%) translateY(14px);
+    color: white; padding: 12px 24px; border-radius: 100px;
+    font-size: 14px; opacity: 0;
+    transition: all .3s ease; z-index: 300; white-space: nowrap;
+    background: rgba(0,0,0,0.85);
+  }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(16px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  @keyframes pulse {
+    0%,100%{transform:scale(1)} 50%{transform:scale(1.1)}
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="bg" id="bg"></div>
+  <div class="loading" id="loading">
+    <div class="loading-emoji">🌙</div>
+    <div class="loading-text">오늘의 한 마디 불러오는 중...</div>
+  </div>
+
+  <div class="main">
+    <div class="glass-card" id="glassCard">
+      <div class="date-label" id="dateLabel"></div>
+      <div class="greeting">
+        <div class="greeting-text" id="greetingText"></div>
+      </div>
+      <div class="divider" id="divider"></div>
+      <div class="word-tag" id="wordTag">오늘의 한 마디</div>
+      <div class="word-main" id="wordMain"></div>
+      <div class="word-sub" id="wordSub"></div>
+      <div class="error-msg" id="errorMsg">오늘의 문구를 준비 중이에요 🌿<br>내일 다시 와주세요!</div>
+      <div class="cta-wrap" id="ctaWrap" style="display:none">
+        <button class="btn-save" id="btnSave" onclick="onSave()">이미지로 저장</button>
+        <button class="btn-share" id="btnShare" onclick="onShare()">공유</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ad-banner" id="adBanner">
+    <span class="ad-label" id="adLabel">AD</span>
+    <span class="ad-text" id="adText">광고 영역 (320 × 50)</span>
+  </div>
+
+  <div class="ad-overlay" id="adOverlay">
+    <div class="ad-box">
+      <div class="ad-box-tag">광고</div>
+      <div class="ad-box-icon" id="adIcon">✨</div>
+      <div class="ad-box-title">전면 광고 영역</div>
+      <div class="ad-box-sub">실제 서비스에서는<br>이 자리에 광고가 노출됩니다</div>
+      <button class="btn-ad-close" id="btnAdClose" onclick="closeAd()">저장하기</button>
+    </div>
+    <button class="ad-skip" onclick="closeAd()">건너뛰기</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+// ── 설정 ─────────────────────────────────────────────
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTE3Sfe0nQE6HaqLvI5SwHUVF4PxqKTk8ficPWoTfZkbfBGCf_dUmCSm-yfhVnrm9WANkHDfAlKZOa5/pub?output=csv';
+
+const BG_IMAGES = {
+  autumn:    'https://i.imgur.com/vPWd3OB.jpeg',
+  cherry:    'https://i.imgur.com/EXsyncp.jpeg',
+  forest:    'https://i.imgur.com/K1VnAcW.jpeg',
+  night:     'https://i.imgur.com/ds0pjVe.jpeg',
+  sea:       'https://i.imgur.com/bwEvi7o.jpeg',
+  snow:      'https://i.imgur.com/jGZ2q0W.jpeg',
+  sunflower: 'https://i.imgur.com/P9WfdAP.jpeg',
+  windmill:  'https://i.imgur.com/im17QFX.jpeg',
+};
+
+// 계절 자동 배경 (background 컬럼 비었을 때)
+function getSeasonBg() {
+  const m = new Date().getMonth() + 1;
+  if (m === 3 || m === 4)  return 'cherry';
+  if (m === 5 || m === 6)  return 'forest';
+  if (m === 7 || m === 8)  return 'sea';
+  if (m === 9)             return 'sunflower';
+  if (m === 10 || m === 11)return 'autumn';
+  if (m === 12 || m === 1) return 'snow';
+  if (m === 2)             return 'night';
+  return 'night';
+}
+
+const BG_THEME = {
+  autumn:'dark', night:'dark', snow:'dark',
+  cherry:'light', forest:'light', sea:'light', sunflower:'light', windmill:'light',
+};
+
+const BG_ACCENT = {
+  autumn:    { main:'#c8845a', sub:'#e8a870' },
+  night:     { main:'#7eb8a4', sub:'#9b8fe8' },
+  snow:      { main:'#88c4e8', sub:'#aad8f5' },
+  cherry:    { main:'#e8a0b8', sub:'#f5c8d8' },
+  forest:    { main:'#7eb8a4', sub:'#5a9a50' },
+  sea:       { main:'#4a90d8', sub:'#7ab8f0' },
+  sunflower: { main:'#e8a030', sub:'#f5c030' },
+  windmill:  { main:'#4a90d8', sub:'#7abf4a' },
+};
+
+// ── CSV 파싱 ──────────────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split('\n');
+  const headers = lines[0].split(',').map(h => h.trim().replace(/"/g,''));
+  return lines.slice(1).map(line => {
+    const values = [];
+    let cur = '', inQuote = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQuote = !inQuote; }
+      else if (ch === ',' && !inQuote) { values.push(cur.trim()); cur = ''; }
+      else { cur += ch; }
+    }
+    values.push(cur.trim());
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = (values[i] || '').replace(/^"|"$/g,'').trim());
+    return obj;
+  });
+}
+
+function formatDate(d) {
+  const days = ['일','월','화','수','목','금','토'];
+  return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} ${days[d.getDay()]}요일`;
+}
+function toDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ── 테마 적용 ─────────────────────────────────────────
+function applyTheme(bgKey) {
+  const isDark  = BG_THEME[bgKey] === 'dark';
+  const accent  = BG_ACCENT[bgKey] || BG_ACCENT.night;
+  const card    = document.getElementById('glassCard');
+
+  if (isDark) {
+    card.style.background   = 'rgba(255,255,255,0.14)';
+    card.style.border       = '1.5px solid rgba(255,255,255,0.28)';
+    card.style.boxShadow    = '0 8px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)';
+    ['dateLabel','wordSub'].forEach(id => document.getElementById(id).style.color = 'rgba(240,236,228,0.58)');
+    ['greetingText','wordMain'].forEach(id => document.getElementById(id).style.color = '#f5ead0');
+    document.getElementById('wordTag').style.color   = accent.sub;
+    document.getElementById('btnSave').style.cssText = 'background:rgba(20,12,5,0.65);color:#f5ead0;border:1px solid rgba(255,220,160,0.2);';
+    document.getElementById('btnShare').style.cssText= 'background:rgba(255,240,200,0.15);color:#f5ead0;border:1.5px solid rgba(255,220,160,0.25);';
+    document.getElementById('adBanner').style.background = 'rgba(10,6,2,0.72)';
+    document.getElementById('adLabel').style.color  = 'rgba(255,220,160,0.4)';
+    document.getElementById('adLabel').style.borderColor = 'rgba(255,220,160,0.2)';
+    document.getElementById('adText').style.color   = 'rgba(255,220,160,0.4)';
+    document.getElementById('errorMsg').style.color = 'rgba(240,236,228,0.6)';
+    document.getElementById('btnAdClose').style.background = accent.main;
+    document.getElementById('adIcon').textContent = bgKey === 'autumn' ? '🍂' : bgKey === 'snow' ? '❄️' : '🌙';
+  } else {
+    card.style.background   = 'rgba(255,255,255,0.48)';
+    card.style.border       = '1.5px solid rgba(255,255,255,0.75)';
+    card.style.boxShadow    = '0 8px 40px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.8)';
+    ['dateLabel','wordSub'].forEach(id => document.getElementById(id).style.color = 'rgba(42,42,42,0.55)');
+    ['greetingText','wordMain'].forEach(id => document.getElementById(id).style.color = '#1a1a1a');
+    document.getElementById('wordTag').style.color   = accent.main;
+    document.getElementById('btnSave').style.cssText = 'background:rgba(28,28,28,0.72);color:white;border:none;';
+    document.getElementById('btnShare').style.cssText= 'background:rgba(255,255,255,0.4);color:#1a1a1a;border:1.5px solid rgba(255,255,255,0.6);';
+    document.getElementById('adBanner').style.background = 'rgba(255,255,255,0.85)';
+    document.getElementById('adLabel').style.color  = '#ccc';
+    document.getElementById('adLabel').style.borderColor = '#e5e5e5';
+    document.getElementById('adText').style.color   = '#ccc';
+    document.getElementById('errorMsg').style.color = 'rgba(42,42,42,0.6)';
+    document.getElementById('btnAdClose').style.background = accent.main;
+    document.getElementById('adIcon').textContent = bgKey === 'cherry' ? '🌸' : bgKey === 'sea' ? '🌊' : bgKey === 'sunflower' ? '🌻' : bgKey === 'windmill' ? '🎐' : '🌿';
+  }
+
+  // divider + word bar 컬러
+  document.getElementById('divider').style.background = `linear-gradient(to right, ${accent.main}, ${accent.sub})`;
+  let styleEl = document.getElementById('dynamicStyle');
+  if (!styleEl) { styleEl = document.createElement('style'); styleEl.id = 'dynamicStyle'; document.head.appendChild(styleEl); }
+  styleEl.textContent = `
+    .word-main::before { background: linear-gradient(to bottom, ${accent.main}, ${accent.sub}) !important; }
+    .word-tag::before  { background: ${accent.main} !important; }
+  `;
+}
+
+// ── 메인 로직 ─────────────────────────────────────────
+let currentData = null;
+
+async function init() {
+  const now      = new Date();
+  const todayStr = toDateStr(now);
+  document.getElementById('dateLabel').textContent = formatDate(now);
+
+  try {
+    const res  = await fetch(SHEET_CSV_URL);
+    const text = await res.text();
+    const rows = parseCSV(text);
+    const row  = rows.find(r => r.date && r.date.trim() === todayStr);
+
+    if (row && row.main && row.sub) {
+      currentData = row;
+      const bgKey = (row.background && row.background.trim()) ? row.background.trim().toLowerCase() : getSeasonBg();
+      document.getElementById('bg').style.backgroundImage = `url('${BG_IMAGES[bgKey] || BG_IMAGES.night}')`;
+      applyTheme(bgKey);
+      document.getElementById('greetingText').textContent = row.greeting || '';
+      document.getElementById('wordMain').textContent     = row.main;
+      document.getElementById('wordSub').textContent      = row.sub;
+      document.getElementById('ctaWrap').style.display    = 'flex';
+    } else {
+      const bgKey = getSeasonBg();
+      document.getElementById('bg').style.backgroundImage = `url('${BG_IMAGES[bgKey]}')`;
+      applyTheme(bgKey);
+      document.getElementById('greetingText').textContent = '곧 새로운 말을 가져올게요 🌿';
+      document.getElementById('wordMain').style.display   = 'none';
+      document.getElementById('wordSub').style.display    = 'none';
+      document.getElementById('errorMsg').style.display   = 'block';
+    }
+  } catch(e) {
+    const bgKey = getSeasonBg();
+    document.getElementById('bg').style.backgroundImage = `url('${BG_IMAGES[bgKey]}')`;
+    applyTheme(bgKey);
+    document.getElementById('greetingText').textContent = '잠시 후 다시 시도해주세요';
+    document.getElementById('errorMsg').style.display   = 'block';
+  }
+
+  setTimeout(() => document.getElementById('loading').classList.add('hide'), 400);
+}
+
+// ── 이미지 저장 (전면 광고 → html2canvas) ─────────────
+function onSave() {
+  document.getElementById('adOverlay').classList.add('show');
+}
+
+async function closeAd() {
+  document.getElementById('adOverlay').classList.remove('show');
+
+  const btn = document.getElementById('btnSave');
+  btn.textContent = '저장 중...';
+  btn.classList.add('saving');
+
+  try {
+    // 광고 배너, 버튼 숨기고 캡처
+    const adBanner = document.getElementById('adBanner');
+    const ctaWrap  = document.getElementById('ctaWrap');
+    adBanner.style.display = 'none';
+    ctaWrap.style.display  = 'none';
+
+    const canvas = await html2canvas(document.getElementById('app'), {
+      useCORS: true,
+      allowTaint: true,
+      scale: 2,
+      backgroundColor: null,
+    });
+
+    adBanner.style.display = '';
+    ctaWrap.style.display  = 'flex';
+
+    const link = document.createElement('a');
+    link.download = `오늘도_${toDateStr(new Date())}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+
+    showToast('이미지가 저장됐어요!');
+  } catch(e) {
+    showToast('저장에 실패했어요. 다시 시도해주세요.');
+    document.getElementById('adBanner').style.display = '';
+    document.getElementById('ctaWrap').style.display  = 'flex';
+  }
+
+  btn.textContent = '이미지로 저장';
+  btn.classList.remove('saving');
+}
+
+// ── 공유 ──────────────────────────────────────────────
+function onShare() {
+  if (!currentData) return;
+  const text = `오늘의 한 마디\n\n"${currentData.main}"\n\n${currentData.sub}\n\n— 오늘도`;
+  if (navigator.share) navigator.share({ title:'오늘도', text });
+  else navigator.clipboard.writeText(text).then(() => showToast('클립보드에 복사됐어요!'));
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
